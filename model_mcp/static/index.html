@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>model-mcp 控制台</title>
+<style>
+  :root {
+    --bg: #f4f6f8;
+    --card: #ffffff;
+    --line: #e3e8ee;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --accent: #0f766e;
+    --accent-soft: #e6f4f1;
+    --warn: #b45309;
+    --warn-soft: #fdf3e3;
+    --code-bg: #0f172a;
+    --code-text: #e2e8f0;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(255,255,255,.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .header-inner {
+    max-width: 1060px; margin: 0 auto; padding: 14px 24px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand h1 { font-size: 19px; margin: 0; letter-spacing: .2px; }
+  .brand span { color: var(--muted); font-size: 12px; }
+  .chips { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 999px;
+    background: #eef2f6; color: #475569; font-size: 12px;
+    border: 1px solid transparent;
+  }
+  .chip::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%; background: #94a3b8;
+  }
+  .chip.ok { background: var(--accent-soft); color: #0b5f59; }
+  .chip.ok::before { background: var(--accent); }
+  .chip.bad { background: var(--warn-soft); color: var(--warn); }
+  .chip.bad::before { background: #d97706; }
+  main { max-width: 1060px; margin: 0 auto; padding: 24px; display: grid; gap: 18px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 20px 22px; box-shadow: 0 1px 2px rgba(15,23,42,.04);
+  }
+  .card h2 {
+    font-size: 15px; margin: 0 0 4px; display: flex; align-items: center; gap: 8px;
+  }
+  .card h2 .num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600;
+  }
+  .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 14px; }
+  .tabs { display: flex; gap: 6px; margin: 14px 0 10px; flex-wrap: wrap; }
+  .tab {
+    border: 1px solid var(--line); background: #fff; color: var(--muted);
+    padding: 6px 12px; border-radius: 9px; cursor: pointer; font-size: 12.5px;
+    font-family: inherit;
+  }
+  .tab.active { background: var(--accent-soft); border-color: #bfe3dd; color: #0b5f59; font-weight: 600; }
+  .pane.hidden { display: none; }
+  pre {
+    margin: 0; padding: 14px 16px; border-radius: 10px;
+    background: var(--code-bg); color: var(--code-text);
+    overflow: auto; font-size: 12.5px; line-height: 1.6;
+    font-family: Consolas, "Cascadia Mono", "Courier New", monospace;
+    white-space: pre;
+  }
+  pre.wrap { white-space: pre-wrap; word-break: break-all; }
+  .code-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 12px 0 6px; gap: 10px;
+  }
+  .code-head b { font-size: 12.5px; font-weight: 600; color: #374151; }
+  .copy {
+    border: 1px solid #cfe5e1; background: var(--accent-soft); color: #0b5f59;
+    padding: 5px 12px; border-radius: 8px; cursor: pointer; font-size: 12px;
+    font-family: inherit; transition: .15s;
+  }
+  .copy:hover { background: #d5ece7; }
+  .kv { display: grid; grid-template-columns: 96px 1fr; gap: 8px 12px; margin: 10px 0 6px; }
+  .kv .k { color: var(--muted); font-size: 12.5px; }
+  .kv .v { font-family: Consolas, monospace; font-size: 12.5px; word-break: break-all; }
+  .hint { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+  .models { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill {
+    background: #eef2f6; border-radius: 7px; padding: 2px 8px;
+    font-family: Consolas, monospace; font-size: 12px; color: #334155;
+  }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; background: #fafbfc; }
+  td code { font-family: Consolas, monospace; color: #0b5f59; }
+  .status-list { display: grid; gap: 6px; font-size: 12.5px; }
+  .status-list div { display: flex; gap: 8px; }
+  .status-list b { width: 92px; color: var(--muted); font-weight: 600; }
+  details { margin-top: 10px; }
+  details summary { cursor: pointer; color: var(--accent); font-size: 12.5px; }
+  #toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(12px);
+    background: #0f172a; color: #fff; padding: 9px 16px; border-radius: 9px;
+    font-size: 13px; opacity: 0; pointer-events: none; transition: .2s;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 8px 0 28px; }
+  @media (max-width: 620px) {
+    main { padding: 14px; }
+    .kv { grid-template-columns: 1fr; gap: 2px 0; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <h1>model-mcp</h1>
+      <span>智能体 A 充当模型后端 · OpenAI 兼容网关</span>
+    </div>
+    <div class="chips">
+      <span class="chip ok" id="chip-service">服务运行中</span>
+      <span class="chip" id="chip-worker">worker 0</span>
+      <span class="chip" id="chip-queue">队列 0</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <h2><span class="num">1</span>让智能体 A 接活（MCP 配置）</h2>
+    <p class="sub">把配置粘进智能体软件的 MCP 设置，再把下面的「接活提示词」发给 A，它就会一直调用 <code>service_wait</code> 等待请求。</p>
+    <div class="tabs" data-tabs="mcp">
+      <button class="tab active" data-pane="pane-mcp-stdio">stdio（桌面智能体推荐）</button>
+      <button class="tab" data-pane="pane-mcp-http">HTTP（远程 / 多客户端）</button>
+    </div>
+    <div class="pane" id="pane-mcp-stdio">
+      <div class="code-head"><b>stdio 配置（JSON）</b><span class="copy" data-copy="code-mcp-stdio">复制配置</span></div>
+      <pre><code id="code-mcp-stdio"></code></pre>
+      <p class="hint">Trae / Cline 放在 <b>mcp.json</b>；Claude Desktop 放在 <b>%APPDATA%\Claude\claude_desktop_config.json</b>。改完重启智能体软件。</p>
+    </div>
+    <div class="pane hidden" id="pane-mcp-http">
+      <div class="code-head"><b>HTTP 配置（JSON）</b><span class="copy" data-copy="code-mcp-http">复制配置</span></div>
+      <pre><code id="code-mcp-http"></code></pre>
+      <p class="hint">适合另一台机器上的 A，或客户端本身走 HTTP 传输。此时不需要用 stdio 启动，请用 <b>HTTP 模式</b>启动服务。</p>
+    </div>
+    <div class="code-head"><b>MCP 端点</b><span class="copy" data-copy="kv-mcp-url">复制地址</span></div>
+    <div class="kv"><div class="k">MCP URL</div><div class="v" id="kv-mcp-url">-</div></div>
+  </section>
+
+  <section class="card">
+    <h2><span class="num">2</span>让软件调用模型（OpenAI 兼容接口）</h2>
+    <p class="sub">任何 OpenAI SDK / 客户端只需改 base_url 与模型名，即可把请求交给 A 处理。</p>
+    <div class="code-head"><b>连接信息</b><span class="copy" data-copy="kv-base-url">复制 Base URL</span></div>
+    <div class="kv">
+      <div class="k">Base URL</div><div class="v" id="kv-base-url">-</div>
+      <div class="k">API Key</div><div class="v" id="kv-api-key">-</div>
+      <div class="k">模型名</div><div class="models" id="kv-models"></div>
+    </div>
+    <div class="tabs" data-tabs="api">
+      <button class="tab active" data-pane="pane-api-py">Python（openai SDK）</button>
+      <button class="tab" data-pane="pane-api-curl">curl</button>
+      <button class="tab" data-pane="pane-api-http">原生 HTTP</button>
+    </div>
+    <div class="pane" id="pane-api-py">
+      <div class="code-head"><b>openai SDK 流式调用</b><span class="copy" data-copy="code-api-py">复制代码</span></div>
+      <pre><code id="code-api-py"></code></pre>
+    </div>
+    <div class="pane hidden" id="pane-api-curl">
+      <div class="code-head"><b>curl（PowerShell 一行版）</b><span class="copy" data-copy="code-api-curl">复制命令</span></div>
+      <pre><code id="code-api-curl"></code></pre>
+      <p class="hint">cmd 里把外层单引号改成双引号，并把内部双引号写成 <b>\"</b>。</p>
+    </div>
+    <div class="pane hidden" id="pane-api-http">
+      <div class="code-head"><b>原始 HTTP 请求</b><span class="copy" data-copy="code-api-http">复制请求</span></div>
+      <pre><code id="code-api-http"></code></pre>
+    </div>
+    <table>
+      <tr><th>方法</th><th>路径</th><th>说明</th></tr>
+      <tr><td>GET</td><td><code>/v1/models</code></td><td>模型列表（含 <code>x_online</code> 在岗状态）</td></tr>
+      <tr><td>POST</td><td><code>/v1/chat/completions</code></td><td>对话补全，支持 <code>stream</code>、<code>tools</code>、<code>reasoning_content</code></td></tr>
+      <tr><td>GET</td><td><code>/health</code> <code>/queue</code></td><td>存活与队列诊断</td></tr>
+      <tr><td>POST</td><td><code>/mcp</code></td><td>MCP streamable-http 端点（A 用）</td></tr>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2><span class="num">3</span>发给智能体 A 的接活提示词</h2>
+    <p class="sub">整段复制给 A（或写成它的系统提示词），它会循环领活 → 生成 → 回填，不会结束。</p>
+    <div class="code-head"><b>worker 提示词</b><span class="copy" data-copy="code-prompt">复制提示词</span></div>
+    <pre class="wrap"><code id="code-prompt">加载中…</code></pre>
+  </section>
+
+  <section class="card">
+    <h2><span class="num">4</span>状态与启动命令</h2>
+    <div class="status-list">
+      <div><b>服务地址</b><span id="st-server">-</span></div>
+      <div><b>在线 worker</b><span id="st-workers">-</span></div>
+      <div><b>队列</b><span id="st-queue">-</span></div>
+      <div><b>Python</b><span id="st-python">-</span></div>
+      <div><b>项目目录</b><span id="st-root">-</span></div>
+      <div><b>等待超时</b><span id="st-timeout">-</span></div>
+    </div>
+    <div class="code-head"><b>启动命令</b><span class="copy" data-copy="code-start">复制命令</span></div>
+    <pre><code id="code-start"></code></pre>
+    <details>
+      <summary>没有 worker 在岗怎么办？</summary>
+      <p class="hint">
+        1. 确认 A 已按上面的 MCP 配置连上，并且在循环调用 <b>service_wait</b>；<br />
+        2. 若 A 报工具超时，把 <b>config.yaml</b> 里的 <b>queue.wait_timeout_s</b> 调到 20~25 秒；<br />
+        3. 想先不接 A 直接验证链路，运行 <b>examples\demo_agent_a.py</b>（模拟 A）。<br />
+        4. 没 worker 时软件会收到 503 no_worker，属于预期保护。
+      </p>
+    </details>
+  </section>
+</main>
+<footer>model-mcp · 本页面由本地网关提供，配置中的路径取当前运行环境</footer>
+<div id="toast"></div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let INFO = null;
+
+  function toast(text) {
+    const node = $("toast");
+    node.textContent = text;
+    node.classList.add("show");
+    clearTimeout(node._t);
+    node._t = setTimeout(() => node.classList.remove("show"), 1600);
+  }
+
+  async function copyText(text, btn) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (e) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+    toast("已复制到剪贴板");
+    if (btn) {
+      const old = btn.textContent;
+      btn.textContent = "已复制";
+      setTimeout(() => (btn.textContent = old), 1200);
+    }
+  }
+
+  function wireCopy() {
+    document.querySelectorAll("[data-copy]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const target = $(btn.dataset.copy);
+        if (target) copyText(target.textContent, btn);
+      });
+    });
+  }
+
+  function wireTabs() {
+    document.querySelectorAll("[data-tabs]").forEach((group) => {
+      group.querySelectorAll(".tab").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          group.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+          const scope = group.dataset.tabs;
+          document.querySelectorAll(".pane").forEach((p) => {
+            if (p.id.startsWith("pane-" + scope)) p.classList.add("hidden");
+          });
+          const pane = $(tab.dataset.pane);
+          if (pane) pane.classList.remove("hidden");
+        });
+      });
+    });
+    // 给 panel 打上 scope 方便切换
+    document.querySelectorAll(".pane").forEach((p) => {
+      if (p.id.startsWith("pane-mcp")) p.dataset.scope = "mcp";
+      if (p.id.startsWith("pane-api")) p.dataset.scope = "api";
+    });
+  }
+
+  function jsonBlock(obj) {
+    return JSON.stringify(obj, null, 2);
+  }
+
+  function render(info) {
+    const port = info.port;
+    const root = info.project_root;
+
+    $("code-mcp-stdio").textContent = [
+      "{",
+      '  "mcpServers": {',
+      '    "model-mcp": {',
+      `      "command": ${JSON.stringify(info.python_exe)},`,
+      `      "args": ["-m", "model_mcp", "--transport", "stdio", "--port", "${port}"],`,
+      `      "cwd": ${JSON.stringify(root)},`,
+      '      "env": {',
+      `        "PYTHONPATH": ${JSON.stringify(root)},`,
+      `        "MODEL_MCP_CONFIG": ${JSON.stringify(info.config_path)}`,
+      "      }",
+      "    }",
+      "  }",
+      "}",
+    ].join("\n");
+
+    $("code-mcp-http").textContent = jsonBlock({
+      mcpServers: { "model-mcp": { url: info.mcp_url } },
+    });
+
+    $("kv-mcp-url").textContent = info.mcp_url;
+    $("kv-base-url").textContent = info.base_url;
+    $("kv-api-key").textContent = info.auth_required
+      ? info.api_key
+      : "sk-local-dummy（任意值，当前未开鉴权）";
+    $("kv-models").innerHTML = info.models.map((m) => `<span class="pill">${m}</span>`).join("");
+
+    const model = info.models[0] || "agent-a";
+
+    $("code-api-py").textContent = `from openai import OpenAI
+
+client = OpenAI(
+    base_url="${info.base_url}",
+    api_key="sk-local-dummy",
+)
+
+stream = client.chat.completions.create(
+    model="${model}",
+    messages=[{"role": "user", "content": "你好，介绍一下你自己"}],
+    stream=True,
+)
+
+for chunk in stream:
+    if not chunk.choices:      # usage 统计块
+        continue
+    delta = chunk.choices[0].delta
+    if getattr(delta, "reasoning_content", None):
+        print(delta.reasoning_content, end="", flush=True)   # 思考
+    if delta.content:
+        print(delta.content, end="", flush=True)             # 正文`;
+
+    $("code-api-curl").textContent = `curl.exe ${info.base_url}/chat/completions -H "Content-Type: application/json" -d '{"model":"${model}","stream":true,"messages":[{"role":"user","content":"你好"}]}'`;
+
+    $("code-api-http").textContent = `POST ${info.base_url}/chat/completions
+Content-Type: application/json
+
+{
+  "model": "${model}",
+  "stream": false,
+  "messages": [
+    { "role": "user", "content": "你好" }
+  ]
+}
+
+# 返回体与 OpenAI 一致：
+# choices[0].message.content
+# choices[0].message.reasoning_content   （思考）
+# choices[0].message.tool_calls          （工具调用）`;
+
+    $("code-prompt").textContent = info.worker_prompt;
+
+    $("st-server").textContent = info.server_url;
+    $("st-python").textContent = info.python_exe;
+    $("st-root").textContent = root;
+    $("st-timeout").textContent = `service_wait 单次 ${info.wait_timeout_s}s`;
+
+    $("code-start").textContent = `cd "${root}"\n${info.python_exe} -m model_mcp.launcher --port ${port}`;
+  }
+
+  async function refresh() {
+    try {
+      const res = await fetch("/queue", { cache: "no-store" });
+      if (!res.ok) throw new Error("bad status");
+      const q = await res.json();
+      const workers = Object.keys(q.workers_online || {});
+      $("chip-service").textContent = "服务运行中";
+      $("chip-service").classList.add("ok");
+      $("chip-worker").textContent = workers.length ? `worker ${workers.length} 在线` : "worker 离线";
+      $("chip-worker").classList.toggle("ok", workers.length > 0);
+      $("chip-worker").classList.toggle("bad", workers.length === 0);
+      $("chip-queue").textContent = `队列 ${q.queued} · 处理中 ${q.active}`;
+      $("st-workers").textContent = workers.length
+        ? workers.map((w) => `${w}（并发 ${q.workers_online[w] || 1}）`).join("、")
+        : "暂无 —— 请让智能体 A 调用 service_wait";
+      $("st-queue").textContent = `等待 ${q.queued} 个请求，处理中 ${q.active} 个，累计跟踪 ${q.tracked} 个`;
+    } catch (e) {
+      $("chip-service").textContent = "连接断开";
+      $("chip-service").classList.remove("ok");
+      $("chip-service").classList.add("bad");
+    }
+  }
+
+  async function boot() {
+    wireTabs();
+    wireCopy();
+    try {
+      const res = await fetch("/ui/info", { cache: "no-store" });
+      INFO = await res.json();
+      render(INFO);
+    } catch (e) {
+      $("code-prompt").textContent = "无法获取配置信息，请确认服务仍在运行。";
+    }
+    refresh();
+    setInterval(refresh, 2000);
+  }
+
+  boot();
+</script>
+</body>
+</html>

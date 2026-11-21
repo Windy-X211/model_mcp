@@ -1,0 +1,28 @@
+server:
+  host: 127.0.0.1
+  port: 8765
+  # 需要本地 token 保护时填写，例如 "sk-local-xxxx"；null 表示不鉴权
+  auth_token: null
+
+models:
+  - name: agent-a
+    description: "由智能体 A 实时处理的模型服务"
+    capacity: 1
+    supports: [stream, tools, reasoning]
+
+queue:
+  # service_wait 单次最长阻塞（秒），要小于智能体软件的 MCP 调用超时
+  wait_timeout_s: 40
+  # 单次请求的总预算，超时后调用方会收到 504
+  request_deadline_s: 600
+  # A 认领后多久没有产出视为失联，会退回队列重派
+  lease_s: 120
+  requeue_max: 2
+  reject_when_no_worker: true
+
+stream:
+  # A 直接提交全文时，网关按这个粒度回放成流式
+  replay_chunk_chars: 24
+  replay_delay_ms: 30
+  # SSE 心跳间隔，防止中间层掐断长连接
+  heartbeat_s: 15

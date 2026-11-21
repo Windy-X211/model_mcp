@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "model-mcp": {
+      "command": "F:\\anaconda3\\python.exe",
+      "args": ["-m", "model_mcp", "--transport", "stdio", "--port", "8765"],
+      "cwd": "F:\\PythonProjects\\TraeProjects\\模型服务mcp",
+      "env": {
+        "PYTHONPATH": "F:\\PythonProjects\\TraeProjects\\模型服务mcp",
+        "MODEL_MCP_CONFIG": "F:\\PythonProjects\\TraeProjects\\模型服务mcp\\config.yaml"
+      }
+    }
+  }
+}
